@@ -1,0 +1,15 @@
+# Built by build.sh from the sources in this folder.
+dist/
+*.zip
+
+# Scratch copies and working notes. Not part of the extension.
+.snapshots/
+.agents/
+.codex/
+
+# The extension has no build step and no dependencies.
+node_modules/
+package-lock.json
+
+*.swp
+.DS_Store

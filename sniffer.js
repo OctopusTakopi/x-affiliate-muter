@@ -1,8 +1,8 @@
-// Injected into the page context. It monkey-patches window.fetch
-// and captures the Authorization header when X calls its own APIs.
+// Injected into the page context. Patches fetch and XMLHttpRequest to capture
+// the Authorization bearer X sends, then posts it to the content script.
 
 (function () {
-  const LOG_PREFIX = "[Affiliate Muter Sniffer]";
+  const LOG_PREFIX = "[Affiliate Tools Sniffer]";
 
   function safeLog(...args) {
     try {
@@ -10,10 +10,49 @@
     } catch (_) {}
   }
 
-  if (window.__affiliateMuterSnifferInstalled) {
+  if (window.__affiliateToolsSnifferInstalled) {
     return;
   }
-  window.__affiliateMuterSnifferInstalled = true;
+  window.__affiliateToolsSnifferInstalled = true;
+
+  let lastAuthorization = null;
+
+  // Every API call X makes carries the same bearer, so posting on each one would
+  // flood the page. Only a changed value gets published.
+  function publish(authorization, onRequest) {
+    if (typeof authorization !== "string" || !authorization.startsWith("Bearer ")) {
+      return;
+    }
+
+    const isNew = authorization !== lastAuthorization;
+    if (isNew) {
+      lastAuthorization = authorization;
+      safeLog("Captured Authorization bearer.");
+    }
+    if (!isNew && !onRequest) return;
+
+    // Addressed to this page's own origin. The content script shares the window,
+    // so it still gets the message.
+    window.postMessage(
+      {
+        source: "affiliate-tools",
+        type: "auth",
+        authorization,
+      },
+      window.location.origin
+    );
+  }
+
+  // This sniffer installs at document_start and the content script attaches at
+  // document_idle, so the bearer is held and re-published on request.
+  window.addEventListener("message", (event) => {
+    if (event.source !== window) return;
+    const data = event.data;
+    if (!data || data.source !== "affiliate-tools" || data.type !== "request-auth") {
+      return;
+    }
+    if (lastAuthorization) publish(lastAuthorization, true);
+  });
 
   const originalFetch = window.fetch;
   if (originalFetch) {
@@ -71,17 +110,7 @@
             }
           }
 
-          if (authorization && authorization.startsWith("Bearer ")) {
-            safeLog("Captured Authorization bearer from fetch to", url);
-            window.postMessage(
-              {
-                source: "affiliate-muter",
-                type: "auth",
-                authorization,
-              },
-              "*"
-            );
-          }
+          if (authorization) publish(authorization);
         }
       } catch (e) {
         safeLog("Error sniffing fetch:", e);
@@ -91,7 +120,7 @@
     };
   }
 
-  // Also hook XMLHttpRequest to catch auth headers set there.
+  // XHR can carry the header too.
   const OriginalXHR = window.XMLHttpRequest;
   if (OriginalXHR) {
     function WrappedXHR() {
@@ -142,17 +171,7 @@
               }
             }
 
-            if (isXApiCall) {
-              safeLog("Captured Authorization bearer from XHR to", requestUrl);
-              window.postMessage(
-                {
-                  source: "affiliate-muter",
-                  type: "auth",
-                  authorization: authHeader,
-                },
-                "*"
-              );
-            }
+            if (isXApiCall) publish(authHeader);
           }
         } catch (e) {
           safeLog("Error sniffing XHR:", e);

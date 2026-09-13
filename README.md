@@ -9,8 +9,7 @@ tab on x.com.
 2. Click "Load unpacked" and pick this folder.
 3. Log into X, open a company profile, then the Affiliates tab.
 4. The buttons appear above the list, with `Stop` and `Reset cap`.
-5. After reloading the extension, refresh the X tab. Chrome leaves running
-   content scripts alive with a dead `chrome.storage` binding.
+5. click mute all
 
 ## How it works
 

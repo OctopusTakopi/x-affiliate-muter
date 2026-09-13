@@ -8,8 +8,8 @@ tab on x.com.
 1. Open `chrome://extensions` and turn on Developer mode.
 2. Click "Load unpacked" and pick this folder.
 3. Log into X, open a company profile, then the Affiliates tab.
-4. The buttons appear above the list, with `Stop` and `Reset cap`.
-5. click mute all
+4. The buttons appear under the navigation bar, with `Mute all` `Block all` `Mute + Block all` `Stop` and `Reset cap`.
+5. Click Mute all
 
 ## How it works
 
